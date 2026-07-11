@@ -13,10 +13,14 @@ def get_llm(config: Config) -> LLMClient:
     if provider == "ollama":
         from trendengine.llm.ollama_client import OllamaClient
         return OllamaClient(config)
+    if provider == "groq":
+        from trendengine.llm.groq_client import GroqClient
+        return GroqClient(config)
     if provider == "anthropic":
         from trendengine.llm.anthropic_client import AnthropicClient
         return AnthropicClient(config)
-    raise LLMError(f"Unknown llm.provider '{provider}' (use 'ollama' or 'anthropic').")
+    raise LLMError(
+        f"Unknown llm.provider '{provider}' (use 'ollama', 'groq', or 'anthropic').")
 
 
 __all__ = ["LLMClient", "LLMError", "get_llm"]

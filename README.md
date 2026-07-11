@@ -449,22 +449,26 @@ Whisper fallback for caption-less sources is a natural add.
 
 ---
 
-## Swapping the LLM to Claude (later)
+## Swapping the LLM
 
-The drafter only talks to the `LLMClient` interface, so switching is config-only:
+The drafter, gate, and clipper all talk to the `LLMClient` interface, so
+switching providers is **config-only** — set `llm.provider` in `config.yaml`:
 
-1. `pip install anthropic`
-2. Put `ANTHROPIC_API_KEY=...` in `.env` (from <https://console.anthropic.com/>).
-3. In `config.yaml`:
-   ```yaml
-   llm:
-     provider: anthropic
-     anthropic:
-       model: claude-sonnet-5
-   ```
+- **`ollama`** (default) — free, local, private. Needs ~8 GB RAM for an 8B model.
+- **`groq`** — **free, hosted, no local RAM.** Best when the server is small/cheap.
+  Get a free key at <https://console.groq.com/keys>, put it in `.env` as
+  `GROQ_API_KEY`, then:
+  ```yaml
+  llm:
+    provider: groq
+    groq:
+      model: llama-3.1-8b-instant     # or llama-3.3-70b-versatile
+  ```
+- **`anthropic`** (Claude) — paid, highest quality. `pip install anthropic`, put
+  `ANTHROPIC_API_KEY` in `.env`, set `provider: anthropic` +
+  `anthropic.model: claude-sonnet-5`.
 
-That's it — no code changes. To go back to free/local, set `provider: ollama`.
-See `trendengine/llm/anthropic_client.py`.
+No code changes for any of them. Adapters live in `trendengine/llm/`.
 
 ---
 
@@ -495,7 +499,7 @@ See `trendengine/llm/anthropic_client.py`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 70 tests, no network required
+python -m pytest           # 75 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,

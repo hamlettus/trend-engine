@@ -113,6 +113,20 @@ sudo systemctl restart trend-engine                # restart after config change
 cd ~/trend-engine && git pull && sudo systemctl restart trend-engine   # update
 ```
 
+## Smaller/cheaper server? Use Groq instead of Ollama
+
+The default runs the LLM locally (Ollama), which is why we pick a VM with enough
+RAM. If Always-Free Arm capacity is unavailable, or you want a tiny box, switch
+to **Groq** (free hosted LLM — no local RAM needed):
+
+1. Free key at **console.groq.com/keys** → add to `~/trend-engine/.env` as
+   `GROQ_API_KEY=...`
+2. In `~/trend-engine/config.yaml` set `llm: provider: groq`
+3. `sudo systemctl restart trend-engine`
+
+Then the server only needs to run ffmpeg + the app, so a much smaller instance
+works. (You can skip the Ollama model pull in that case.)
+
 ## Honest notes
 
 - **Platform API approval is the real wait**, not the server: YouTube uploads

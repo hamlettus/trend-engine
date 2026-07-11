@@ -80,12 +80,16 @@ generation:
   max_caption_chars: 2200
 
 llm:
-  provider: "ollama"         # ollama (default, free/local) | anthropic (enable later)
+  provider: "ollama"         # ollama (free/local) | groq (free/hosted) | anthropic
   ollama:
     host: "http://localhost:11434"
     model: "llama3.1"        # or "mistral"; must be pulled: `ollama pull llama3.1`
     temperature: 0.8
     timeout_seconds: 120
+  groq:                      # free hosted inference — no local RAM needed.
+    model: "llama-3.1-8b-instant"   # or "llama-3.3-70b-versatile" (better, tighter limits)
+    temperature: 0.8
+    timeout_seconds: 60      # needs GROQ_API_KEY in .env (console.groq.com/keys)
   anthropic:                 # only used when provider == anthropic (needs ANTHROPIC_API_KEY)
     model: "claude-sonnet-5"
     temperature: 0.8
