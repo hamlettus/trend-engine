@@ -14,3 +14,9 @@ youtube_token.json
 .DS_Store
 .idea/
 .vscode/
+
+# Serverless (GitHub Actions) state is committed on purpose — these negations
+# must come AFTER the *.sqlite3 / *.db rules above to take effect.
+!state/
+!state/trendengine.sqlite3
+!state/SUMMARY.md

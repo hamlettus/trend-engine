@@ -4,12 +4,16 @@ Swap providers by editing ``llm.provider`` in config.yaml — no code changes.
 """
 from __future__ import annotations
 
+import os
+
 from trendengine.config import Config
 from trendengine.llm.base import LLMClient, LLMError
 
 
 def get_llm(config: Config) -> LLMClient:
-    provider = (config.llm.get("provider", "ollama") or "ollama").lower()
+    # LLM_PROVIDER env overrides config (used by the CI/serverless runner + VPS).
+    provider = (os.environ.get("LLM_PROVIDER")
+                or config.llm.get("provider", "ollama") or "ollama").lower()
     if provider == "ollama":
         from trendengine.llm.ollama_client import OllamaClient
         return OllamaClient(config)

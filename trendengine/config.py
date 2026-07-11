@@ -66,4 +66,6 @@ class Config:
         return os.environ.get(key, default)
 
     def db_path(self) -> Path:
-        return PROJECT_ROOT / "trendengine.sqlite3"
+        # TRENDENGINE_DB lets the serverless (CI) runner keep state in state/.
+        env = os.environ.get("TRENDENGINE_DB")
+        return Path(env) if env else PROJECT_ROOT / "trendengine.sqlite3"

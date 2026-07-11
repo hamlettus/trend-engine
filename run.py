@@ -175,6 +175,16 @@ def cmd_earnings(config: Config) -> None:
     print(f"  {'TOTAL':20} {'':22} ${total:.2f} (estimated)")
 
 
+def cmd_ci(config: Config) -> None:
+    """Serverless batch run (GitHub Actions): clip campaigns + summary."""
+    from trendengine.ci import run_ci
+    init_db(config)
+    res = run_ci(config)
+    print(f"✓ CI run: {res['campaigns'] or 'no campaigns'}")
+    print(f"  Ingest: {res['ingest']}")
+    print(f"  Summary written to {res['summary']}")
+
+
 def cmd_ingest(config: Config) -> None:
     from trendengine.learning import PerformanceIngestor
     init_db(config)
@@ -289,6 +299,7 @@ COMMANDS = {
     "bootstrap": cmd_bootstrap,
     "clip": cmd_clip,
     "earnings": cmd_earnings,
+    "ci": cmd_ci,
     "ingest": cmd_ingest,
     "learn": cmd_learn,
     "insights": cmd_insights,

@@ -351,6 +351,10 @@ walkthroughs:
 - **[`deploy/VPS-SETUP.md`](deploy/VPS-SETUP.md)** — a ~$6/mo VPS (DigitalOcean/
   Vultr/Hetzner/Linode) paid via **PayPal**, for when Oracle's card check rejects
   you. Uses Groq (free hosted LLM) so a tiny box works.
+- **[`deploy/GITHUB-ACTIONS.md`](deploy/GITHUB-ACTIONS.md)** — **$0, no server, no
+  card.** Runs on GitHub's own scheduled runners using the account you already
+  have. No live dashboard — instead each run writes `state/SUMMARY.md` (read it in
+  the GitHub mobile app) and uploads clips as artifacts.
 
 One-line install on a fresh Ubuntu server:
 
@@ -516,7 +520,7 @@ No code changes for any of them. Adapters live in `trendengine/llm/`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 83 tests, no network required
+python -m pytest           # 87 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,

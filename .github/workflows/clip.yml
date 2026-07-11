@@ -1,0 +1,61 @@
+name: clip
+
+# Free serverless run: makes clips on a schedule using GitHub's own runners.
+# No server, no card. Configure GROQ_API_KEY as a repository secret.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"     # every 6 hours (UTC)
+  workflow_dispatch: {}        # + a "Run workflow" button you can tap on github.com
+
+permissions:
+  contents: write              # so it can commit updated state/ back to the repo
+
+concurrency:
+  group: clip
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LLM_PROVIDER: groq
+      TRENDENGINE_DB: state/trendengine.sqlite3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ensure ffmpeg
+        run: ffmpeg -version >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+
+      - name: Run clip campaigns
+        run: python run.py ci
+
+      - name: Upload clips (download from this run's Artifacts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clips
+          path: media_out/clips/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Save state + summary back to the repo
+        if: always()
+        run: |
+          git config user.name "trend-engine-bot"
+          git config user.email "trend-engine-bot@users.noreply.github.com"
+          git add -f state/ || true
+          git diff --cached --quiet || git commit -m "ci: update state + summary [skip ci]"
+          git push || true
