@@ -138,6 +138,41 @@ def cmd_bootstrap(config: Config) -> None:
               "(see learning.min_samples_to_learn).")
 
 
+def cmd_clip(config: Config) -> None:
+    """Clip an AUTHORIZED campaign's source videos and queue them (shadow by default)."""
+    from trendengine.clipping.campaign import UnauthorizedSource
+    from trendengine.clipping.runner import run_clip_campaign
+    init_db(config)
+    campaign_id = getattr(config, "cli_campaign", None)
+    if not campaign_id:
+        print("Specify a campaign: python run.py clip --campaign <id>")
+        from trendengine.clipping.campaign import load_campaigns
+        print(f"Available campaigns: {', '.join(load_campaigns()) or '(none in campaigns.yaml)'}")
+        return
+    live = getattr(config, "cli_force", False)  # --force = actually upload
+    print(f"Clipping '{campaign_id}' ({'LIVE upload' if live else 'shadow — no upload'})")
+    try:
+        stats = run_clip_campaign(config, campaign_id, live=live)
+        print(f"✓ {stats.summary()}")
+    except UnauthorizedSource as exc:
+        print(f"✗ Refused: {exc}")
+
+
+def cmd_earnings(config: Config) -> None:
+    from trendengine.clipping.runner import campaign_earnings
+    init_db(config)
+    rows = campaign_earnings(config)
+    if not rows:
+        print("No campaigns in campaigns.yaml yet.")
+        return
+    total = 0.0
+    for r in rows:
+        total += r["estimated_payout"]
+        print(f"  {r['campaign']:20} posts={r['posts']:3} views={r['views']:>8,} "
+              f"@ ${r['rate_per_1k']}/1k → ${r['estimated_payout']:.2f}")
+    print(f"  {'TOTAL':20} {'':22} ${total:.2f} (estimated)")
+
+
 def cmd_ingest(config: Config) -> None:
     from trendengine.learning import PerformanceIngestor
     init_db(config)
@@ -250,6 +285,8 @@ COMMANDS = {
     "autopilot-run": cmd_autopilot_run,
     "youtube-auth": cmd_youtube_auth,
     "bootstrap": cmd_bootstrap,
+    "clip": cmd_clip,
+    "earnings": cmd_earnings,
     "ingest": cmd_ingest,
     "learn": cmd_learn,
     "insights": cmd_insights,
@@ -263,12 +300,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default=None, help="path to config.yaml")
     parser.add_argument("--log-level", default="INFO")
     parser.add_argument("--force", action="store_true",
-                        help="re-run a one-off action (e.g. bootstrap) even if already done")
+                        help="re-run a one-off action (bootstrap), or LIVE-upload for `clip`")
+    parser.add_argument("--campaign", default=None, help="campaign id for `clip`")
     args = parser.parse_args(argv)
 
     setup_logging(args.log_level)
     config = Config.load(config_path=args.config)
-    config.cli_force = args.force  # read by cmd_bootstrap
+    config.cli_force = args.force        # bootstrap re-seed / clip live-upload
+    config.cli_campaign = args.campaign  # read by cmd_clip
     COMMANDS[args.command](config)
     return 0
 

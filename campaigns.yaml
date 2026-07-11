@@ -1,0 +1,39 @@
+# =============================================================================
+# Clipping campaigns — AUTHORIZED source content only.
+#
+# Each campaign is content you have permission to clip: a paid clipping program
+# (Whop etc.), a direct arrangement with a creator, or your own long-form.
+#
+# HARD RULE: the clipper refuses to touch a source unless `authorized: true`
+# AND `authorization_note` explains the basis (which program / who licensed it).
+# This is deliberate — it keeps the tool on the legitimate side. Do not set
+# authorized: true for content you don't have the right to redistribute.
+# =============================================================================
+
+campaigns:
+  - id: "example-campaign"
+    name: "Example creator clip campaign"
+    # -- authorization (required) --
+    authorized: false                 # TODO: set true ONLY when you have rights
+    authorization_note: ""            # TODO: e.g. "Whop campaign #1234, per-view license"
+                                      #       or "Direct permission from @creator, 2026-07"
+
+    # -- source content you're licensed to clip --
+    source_urls:
+      - "https://www.youtube.com/watch?v=REPLACE_WITH_AUTHORIZED_SOURCE"
+
+    # -- payout --
+    payout_per_1k_views: 1.00         # your rate ($ per 1,000 views)
+
+    # -- publishing targets --
+    platforms: ["youtube"]            # youtube (live) | tiktok, instagram, facebook (stubs)
+
+    # -- campaign rules (enforced on every clip) --
+    required_hashtags: ["#clip"]      # tags the campaign requires
+    required_mention: "@creator"      # credit the creator (goes in the caption)
+    tracking_tag: ""                  # any tracking string the campaign needs in the caption
+
+    # -- clip shape --
+    min_seconds: 15
+    max_seconds: 60
+    clips_per_source: 3               # how many clips to pull from each source video

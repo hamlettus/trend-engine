@@ -82,8 +82,13 @@ class Draft(Base):
     arms: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # bandit arms chosen
     features: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # topic features at draft time
     learned_applied: Mapped[bool] = mapped_column(Boolean, default=False)  # bandit reward folded in
-    video_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # rendered Short
+    video_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # rendered Short/clip
     external_post_id: Mapped[str | None] = mapped_column(String(255), nullable=True)  # youtube id
+    # -- clipping (paid-clipper mode) --
+    campaign: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)  # authorized source
+    clip_start: Mapped[float | None] = mapped_column(Float, nullable=True)
+    clip_end: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     feedback: Mapped[list["PerformanceFeedback"]] = relationship(
         back_populates="draft", cascade="all, delete-orphan")

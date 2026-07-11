@@ -3,6 +3,9 @@ APScheduler>=3.10,<4.0
 PyYAML>=6.0
 python-dotenv>=1.0
 
+# --- Clipping (download authorized source video + captions) ---
+yt-dlp>=2024.1                 # download authorized campaign source videos + subtitles
+
 # --- Trend discovery (all free) ---
 praw>=7.7                      # Reddit  (needs free app credentials, see .env)
 pytrends>=4.9                  # Google Trends (no key)

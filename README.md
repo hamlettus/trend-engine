@@ -340,6 +340,67 @@ python run.py insights
 
 ---
 
+## Paid clipping mode (authorized content)
+
+For the paid-clipper workflow — you clip content you're **licensed** to
+redistribute (a clipping program like Whop, a direct creator arrangement, or
+your own long-form) and get paid per view. This reuses the whole engine; only
+the source and the video step change.
+
+**Hard rule:** every campaign in `campaigns.yaml` must set `authorized: true`
+**and** an `authorization_note` (your rights basis). The clipper calls
+`ensure_authorized()` before touching any source and **refuses** otherwise — so
+the tool structurally can't clip content you don't have rights to. Do not assert
+authorization for content you haven't been licensed to redistribute; reposting
+others' videos without permission gets Content-ID claims, strikes, and channel
+termination on every platform, and won't monetize.
+
+### How it works
+
+```
+authorized source URL → yt-dlp downloads video + captions
+  → local LLM picks the strongest moments from the transcript
+  → ffmpeg cuts each window, center-crops to 9:16, burns the captions
+  → queued as clips (shadow) → publish to the campaign's platforms
+  → views ingested → earnings = views × rate, and the learning loop optimises
+    which moments/styles/times maximise views (= your payout)
+```
+
+### Configure a campaign
+
+Edit `campaigns.yaml`:
+
+```yaml
+campaigns:
+  - id: "creator-x-june"
+    authorized: true
+    authorization_note: "Whop campaign #1234, per-view license"   # your rights basis
+    source_urls: ["https://youtube.com/watch?v=<authorized>"]
+    payout_per_1k_views: 1.50
+    platforms: ["youtube"]          # youtube (live) | tiktok, instagram, facebook (stubs)
+    required_hashtags: ["#creatorx"]
+    required_mention: "@creatorx"    # credit, added to every caption
+    min_seconds: 15
+    max_seconds: 60
+    clips_per_source: 3
+```
+
+### Run it
+
+```bash
+python run.py clip --campaign creator-x-june          # clip + queue (shadow, no upload)
+python run.py clip --campaign creator-x-june --force  # LIVE: actually upload
+python run.py earnings                                 # views × rate per campaign
+```
+
+Earnings also show on the dashboard **Insights** tab. First real publisher is
+**YouTube Shorts** (reuses the existing OAuth uploader); TikTok and IG/FB Reels
+are ready-to-wire stubs — fill in their `publish()` and add them to a campaign's
+`platforms`. Captions need to exist on the source (yt-dlp fetches them); a
+Whisper fallback for caption-less sources is a natural add.
+
+---
+
 ## Safety controls
 
 - **Rate limits** — `sources.<name>.min_interval_seconds` gates each source.
@@ -404,7 +465,7 @@ See `trendengine/llm/anthropic_client.py`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 51 tests, no network required
+python -m pytest           # 66 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,
@@ -416,8 +477,10 @@ Thompson-sampling **bandit** (learns toward a rewarded arm), the ridge
 (gate → post → ingest → reward), the **public-winner bootstrap** (seeds the
 bandit toward high-performing niche content before any own posts), and the
 **title virality model** (learns the number/length/question/hashtag signal and
-flows it into the prompt) — with fakes standing in for the LLM, ffmpeg, and
-YouTube.
+flows it into the prompt), and the **clipping pipeline** (authorization gate
+refuses unlicensed sources, VTT transcript parsing, LLM moment validation, the
+9:16 ffmpeg command, and a full shadow/live campaign run + earnings) — with
+fakes standing in for the LLM, ffmpeg, yt-dlp, and the platforms.
 
 ---
 

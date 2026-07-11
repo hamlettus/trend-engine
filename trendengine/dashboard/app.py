@@ -248,7 +248,15 @@ def _gather_insights(config: Config) -> dict:
     winner_styles = (CorpusLearner(config).report().get("style_strength", {})
                      if n_ref else {})
 
+    try:
+        from trendengine.clipping.runner import campaign_earnings
+        earnings = campaign_earnings(config)
+    except Exception:  # noqa: BLE001 - earnings are best-effort
+        earnings = []
+    earnings_total = round(sum(e["estimated_payout"] for e in earnings), 2)
+
     return {
+        "earnings": earnings, "earnings_total": earnings_total,
         "bootstrapped": bootstrapped, "n_ref": n_ref,
         "n_posted": n_posted, "n_shadow": n_shadow, "n_metrics": n_metrics,
         "canary": canary.current_per_day if canary else None,

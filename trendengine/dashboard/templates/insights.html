@@ -18,6 +18,26 @@
     </div>
   </div>
 
+  <!-- Earnings (paid-clipper) -->
+  {% if earnings %}
+  <div class="card">
+    <h3 style="margin-top:0">Estimated earnings
+      <span class="sub">accumulated views × campaign rate</span></h3>
+    <table>
+      <tr><th>Campaign</th><th>Posts</th><th>Views</th><th>Rate/1k</th><th>Est. payout</th></tr>
+      {% for e in earnings %}
+        <tr><td>{{ e.campaign }}</td><td>{{ e.posts }}</td>
+            <td>{{ '{:,}'.format(e.views) }}</td><td>${{ e.rate_per_1k }}</td>
+            <td class="best">${{ '%.2f'|format(e.estimated_payout) }}</td></tr>
+      {% endfor %}
+      <tr><td colspan="4" style="text-align:right"><strong>Total</strong></td>
+          <td class="best"><strong>${{ '%.2f'|format(earnings_total) }}</strong></td></tr>
+    </table>
+    <p class="muted" style="font-size:12px; margin-top:8px">Estimate only — reconcile
+      against each campaign's official dashboard for actual payout.</p>
+  </div>
+  {% endif %}
+
   <!-- Title virality model -->
   <div class="card">
     <h3 style="margin-top:0">Title virality model
