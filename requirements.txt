@@ -1,0 +1,37 @@
+# --- Core scheduling & config ---
+APScheduler>=3.10,<4.0
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# --- Trend discovery (all free) ---
+praw>=7.7                      # Reddit  (needs free app credentials, see .env)
+pytrends>=4.9                  # Google Trends (no key)
+google-api-python-client>=2.100  # YouTube Data API (free tier key, see .env)
+feedparser>=6.0                # RSS
+
+# --- Analysis & learning ---
+pandas>=2.0
+numpy>=1.24                    # bandit + ridge-regression weight learner
+
+# --- YouTube upload (autopilot publishing) ---
+google-auth>=2.30
+google-auth-oauthlib>=1.2      # one-time OAuth to get an upload token
+google-auth-httplib2>=0.2
+
+# --- Local LLM (Ollama) + HTTP ---
+requests>=2.31
+
+# --- Persistence ---
+SQLAlchemy>=2.0
+
+# --- Approval dashboard ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9        # FastAPI form handling
+
+# --- Assisted publishing ---
+pyperclip>=1.8                 # copy-to-clipboard (uses pbcopy on macOS)
+
+# --- Optional: enable the Anthropic (Claude) LLM adapter later ---
+# anthropic>=0.39

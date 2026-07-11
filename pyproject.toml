@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+# Put the project root on sys.path so both `trendengine` and `tests` import cleanly.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

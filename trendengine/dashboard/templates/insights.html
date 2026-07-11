@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block body %}
+  <div class="row" style="margin-bottom:6px">
+    <h2 style="margin:0">What the engine has learned</h2>
+    <span class="pill {{ 'posted' if mode=='live' else 'pending' }}">autopilot: {{ mode }}</span>
+  </div>
+  <p class="muted" style="margin-top:0">Live view of the learning stack — bootstrap
+    prior, title model, bandit, and topic weights. Refresh to update.</p>
+
+  <div class="card">
+    <div class="kpis">
+      <div class="kpi"><div class="n">{{ n_ref }}</div><div class="l">public refs (bootstrap)</div></div>
+      <div class="kpi"><div class="n">{{ n_posted }}</div><div class="l">own posts</div></div>
+      <div class="kpi"><div class="n">{{ n_shadow }}</div><div class="l">shadow drafts</div></div>
+      <div class="kpi"><div class="n">{{ n_metrics }}</div><div class="l">metric snapshots</div></div>
+      <div class="kpi"><div class="n">{{ canary if canary is not none else '—' }}</div><div class="l">canary posts/day</div></div>
+      <div class="kpi"><div class="n">{{ '✓' if bootstrapped else '—' }}</div><div class="l">bootstrapped</div></div>
+    </div>
+  </div>
+
+  <!-- Title virality model -->
+  <div class="card">
+    <h3 style="margin-top:0">Title virality model
+      <span class="sub">which title features correlate with engagement</span></h3>
+    {% if not title_signals %}
+      <p class="empty">Not fitted yet — run <code>python run.py bootstrap</code> (needs a
+        corpus) or wait for posts to accumulate.</p>
+    {% else %}
+      {% for s in title_signals %}
+      <div class="barrow">
+        <div class="k">{{ s.feature }}</div>
+        <div class="track center0">
+          <div class="mid"></div>
+          {% if s.positive %}
+            <div class="fill signed good" style="left:50%; width:{{ (s.pct/2)|round(1) }}%"></div>
+          {% else %}
+            <div class="fill signed neg" style="right:50%; width:{{ (s.pct/2)|round(1) }}%"></div>
+          {% endif %}
+        </div>
+        <div class="v">{{ '%+.3f'|format(s.coef) }}</div>
+      </div>
+      {% endfor %}
+      {% if title_hints %}
+        <p class="muted" style="margin:14px 0 6px; font-size:13px">Hints now steering generation:</p>
+        {% for h in title_hints %}<div class="hint">{{ h }}</div>{% endfor %}
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- Bandit -->
+  <div class="card">
+    <h3 style="margin-top:0">Bandit arms
+      <span class="sub">win-rate = Beta mean; ★ = current best per dimension</span></h3>
+    {% if not arms_by_dim %}
+      <p class="empty">No arms yet — bootstrap seeds these from public winners, then live
+        posts refine them.</p>
+    {% else %}
+      {% for dim, arms in arms_by_dim.items() %}
+        <p class="muted" style="margin:12px 0 4px; font-size:13px"><strong>{{ dim }}</strong></p>
+        {% for a in arms %}
+        <div class="barrow">
+          <div class="k">{{ '★ ' if a.best else '' }}<span class="{{ 'best' if a.best else '' }}">{{ a.value }}</span></div>
+          <div class="track"><div class="fill {{ 'good' if a.best else 'dim' }}" style="width:{{ a.win_pct }}%"></div></div>
+          <div class="v">{{ a.win_pct }}% · {{ a.pulls }}p</div>
+        </div>
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Topic weights -->
+  <div class="card">
+    <h3 style="margin-top:0">Topic-scoring weights
+      <span class="sub">config vs. learned ({{ weight_samples }} own posts)</span></h3>
+    {% for w in weight_rows %}
+    <div class="barrow">
+      <div class="k">{{ w.feature }}</div>
+      <div class="track" style="display:flex; flex-direction:column; gap:2px; height:auto; background:none; border:none">
+        <div class="track" style="height:11px"><div class="fill dim" style="width:{{ w.config_pct }}%"></div></div>
+        <div class="track" style="height:11px"><div class="fill good" style="width:{{ w.learned_pct }}%"></div></div>
+      </div>
+      <div class="v">
+        {{ w.config }}{% if w.learned is not none %} → {{ w.learned }}{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    <p class="muted" style="font-size:12px; margin-top:8px">
+      <span style="color:#3a4553">▮</span> config &nbsp;
+      <span style="color:var(--green)">▮</span> learned (blended in once enough posts land)
+    </p>
+  </div>
+
+  <!-- Corpus winner styles -->
+  {% if winner_styles %}
+  <div class="card">
+    <h3 style="margin-top:0">Public winner styles
+      <span class="sub">mean performance percentile in the reference corpus</span></h3>
+    {% for style, strength in winner_styles.items() %}
+    <div class="barrow">
+      <div class="k">{{ style }}</div>
+      <div class="track"><div class="fill" style="width:{{ (strength*100)|round(1) }}%"></div></div>
+      <div class="v">{{ (strength*100)|round(0)|int }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endblock %}

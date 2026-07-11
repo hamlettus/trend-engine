@@ -1,0 +1,4 @@
+# Development / test dependencies (the runtime deps are in requirements.txt).
+-r requirements.txt
+pytest>=8.0
+httpx>=0.27          # used by starlette's TestClient in the dashboard tests

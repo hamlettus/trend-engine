@@ -1,0 +1,184 @@
+# =============================================================================
+# trend-engine configuration
+# Single source of truth for the niche, brand voice, sources, and schedule.
+# Secrets (API keys) live in .env, NOT here.
+# =============================================================================
+
+niche:
+  name: "AI productivity tools"
+  # Keywords drive Reddit search terms, Google Trends queries, YouTube queries,
+  # and are used to tag/match items from RSS feeds.
+  keywords:
+    - "AI productivity"
+    - "AI agents"
+    - "local LLM"
+    - "prompt engineering"
+    - "automation tools"
+
+brand:
+  # Free-form description of your voice. This is injected into the LLM prompt.
+  voice: >
+    Practical, upbeat, and no-hype. You explain why a trend matters for solo
+    creators and small teams. Short punchy sentences. You never overpromise.
+  tone:
+    - helpful
+    - concise
+    - lightly witty
+  # Always-on hashtags appended to every draft (the LLM also proposes topical ones).
+  hashtags_base:
+    - "#AI"
+    - "#productivity"
+  emoji: true
+  # Optional call-to-action the LLM is nudged to include.
+  cta: "Follow for daily AI tips."
+
+sources:
+  reddit:
+    enabled: true
+    subreddits: ["productivity", "artificial", "LocalLLaMA", "automation"]
+    listing: "hot"           # hot | new | top | rising
+    time_filter: "day"       # only used when listing == top
+    limit: 25
+    min_score: 20            # ignore low-engagement posts
+    min_interval_seconds: 60 # rate limit: don't hit Reddit more often than this
+
+  google_trends:
+    enabled: true
+    geo: "US"                # "" for worldwide
+    timeframe: "now 7-d"     # pytrends timeframe
+    min_interval_seconds: 300
+
+  youtube:
+    enabled: false           # flip to true once YOUTUBE_API_KEY is set
+    region_code: "US"
+    max_results: 25
+    order: "viewCount"       # viewCount | date | relevance | rating
+    published_within_days: 7
+    min_interval_seconds: 120
+
+  rss:
+    enabled: true
+    feeds:
+      - "https://hnrss.org/frontpage"
+      - "https://www.technologyreview.com/feed/"
+    min_interval_seconds: 120
+    respect_robots: true
+
+analysis:
+  history_window_days: 7     # how far back growth-rate looks
+  weights:                   # must sum to ~1.0; engagement scoring blend
+    frequency: 0.30
+    growth: 0.30
+    engagement: 0.40
+  # How strongly past post performance re-weights topics (0 = ignore, 1 = strong).
+  performance_learning_rate: 0.35
+
+generation:
+  platform: "instagram"      # instagram | tiktok | x | linkedin (affects prompt + limits)
+  max_topics: 5              # analyse the top-N topics per run
+  drafts_per_run: 3          # generate this many drafts per run
+  max_caption_chars: 2200
+
+llm:
+  provider: "ollama"         # ollama (default, free/local) | anthropic (enable later)
+  ollama:
+    host: "http://localhost:11434"
+    model: "llama3.1"        # or "mistral"; must be pulled: `ollama pull llama3.1`
+    temperature: 0.8
+    timeout_seconds: 120
+  anthropic:                 # only used when provider == anthropic (needs ANTHROPIC_API_KEY)
+    model: "claude-sonnet-5"
+    temperature: 0.8
+    max_tokens: 1024
+
+schedule:
+  interval_minutes: 180      # base cadence of the discovery->draft loop
+  jitter_seconds: 900        # randomise each run by up to +/- this (looks organic, avoids bursts)
+  run_on_start: true         # run one cycle immediately when the scheduler boots
+
+safety:
+  global_enabled: true       # master on/off for the discovery loop
+  kill_switch_file: ".killswitch"  # if this file exists, the loop hard-stops
+  max_drafts_per_day: 12     # never queue more than this many drafts in 24h
+
+dashboard:
+  host: "127.0.0.1"          # localhost only — do not expose publicly
+  port: 8765
+
+publishing:
+  default_publisher: "assisted"  # assisted | youtube | meta_graph (stub) | tiktok (stub)
+  export_dir: "exports"
+  copy_to_clipboard: true    # macOS pbcopy via pyperclip
+  open_browser: false        # open the platform composer in your browser on prepare
+
+# =============================================================================
+# AUTOPILOT — fully autonomous mode. No human in the loop; automated GATES
+# replace the human approver. Run with:  python run.py autopilot
+# =============================================================================
+autopilot:
+  enabled: true
+  publisher: "youtube"       # which real publisher autopilot posts through
+  # Mode controls how live it is:
+  #   shadow  = run the whole loop, render, but DO NOT upload (writes would-be
+  #             posts to the queue as status 'shadow' so you can inspect).
+  #   live    = actually upload approved+gated drafts.
+  mode: "shadow"             # START in shadow. Flip to "live" once you trust it.
+  interval_minutes: 240      # how often the autopilot cycle runs
+  jitter_seconds: 1200
+  # Canary ramp: begin at N posts/day, auto-increase by `ramp_step` each day the
+  # gate/performance stays healthy, never exceeding `max_per_day`. YouTube's free
+  # API quota (10k units/day, ~1600 per upload) caps real uploads near 5-6/day.
+  canary:
+    start_per_day: 1
+    ramp_step: 1
+    max_per_day: 4
+    # Ramp only if recent posts clear this median engagement rate (else hold).
+    healthy_engagement_rate: 0.02
+
+guardrails:
+  # Automated quality/safety gate that stands in for the human approver.
+  min_topic_score: 0.35          # drop weak trends before they ever get drafted
+  min_caption_chars: 60
+  max_caption_chars: 2200
+  # Hard blocklist — any match (case-insensitive, word-ish) rejects the draft.
+  banned_terms: ["nsfw", "guaranteed returns", "not financial advice", "crypto pump"]
+  require_llm_self_critique: true  # a second LLM pass scores its own draft
+  self_critique_min_score: 7       # 1-10; below this the draft is rejected
+  dedup_days: 30                   # don't post about a topic posted within N days
+
+media:
+  # Local, free Short generation: script -> TTS voiceover -> ffmpeg captioned video.
+  enabled: true
+  resolution: "1080x1920"          # vertical for Shorts
+  fps: 30
+  max_seconds: 55                  # keep under the Shorts limit
+  background: "gradient"           # gradient | solid | image
+  background_color: "#0f1216"
+  background_image: ""             # used when background == image
+  tts: "say"                       # say (macOS, free, built-in) | piper | none
+  piper_voice: ""                  # path to a piper .onnx voice if tts == piper
+  font: ""                         # path to a .ttf; empty = ffmpeg default
+  work_dir: "media_out"
+
+youtube:
+  category_id: "28"                # 28 = Science & Technology
+  privacy_status: "public"         # public | unlisted | private
+  made_for_kids: false
+  add_shorts_tag: true             # append #Shorts to help classification
+  token_file: ""                   # blank = ~/.config/trend-engine/youtube_token.json
+
+learning:
+  enabled: true
+  # Pull fresh stats for posted videos this many hours after posting (and again
+  # on a schedule) so the learner sees settled engagement.
+  ingest_after_hours: [6, 24, 72]
+  min_samples_to_learn: 8          # don't touch weights/arms until this many posts
+  reward_metric: "engagement_rate" # engagement_rate | views | likes
+  weight_decay_days: 45            # older results count less
+  ridge_lambda: 1.0                # regularisation for the weight learner
+  # Bandit knobs it optimises from its own results (each post is one pull):
+  bandit_arms:
+    post_hour: [8, 12, 17, 20]     # local-time slots to try
+    caption_style: ["hook_first", "listicle", "question", "bold_claim"]
+    hashtag_count: [3, 5, 8]
+  bandit_explore: 0.15             # epsilon floor for exploration
