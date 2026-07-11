@@ -24,7 +24,12 @@ order — each unlocks the next. ⏱ = rough time, 👤 = only you can do it,
 
 ## Phase 1 — Stand up the server (👤 ~20 min, mostly waiting)
 
-Follow **`deploy/PHONE-SETUP.md`** Steps 2–4:
+Pick your host guide:
+- Oracle Cloud (free, if their card check accepts you): **`deploy/PHONE-SETUP.md`**
+- ~$6/mo VPS via PayPal (DigitalOcean etc.): **`deploy/VPS-SETUP.md`** ← use this
+  if Oracle rejected your card
+
+Then (Oracle path shown; the VPS guide has its own equivalents):
 
 - [ ] Create the Ubuntu VM (Ampere, ~12 GB RAM) and note its public IP.
 - [ ] In the browser Cloud Shell, paste the one-line installer.

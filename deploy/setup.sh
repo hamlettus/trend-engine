@@ -20,6 +20,8 @@ REPO="${REPO:-https://github.com/hamlettus/trend-engine}"
 APP_DIR="${APP_DIR:-$HOME/trend-engine}"
 MODEL="${OLLAMA_MODEL:-llama3.1}"
 PORT="${DASHBOARD_PORT:-8765}"
+# ollama (local LLM, needs ~8GB RAM) or groq (free hosted, runs on a tiny box).
+LLM_PROVIDER="${LLM_PROVIDER:-ollama}"
 
 log() { echo -e "\n\033[1;36m==> $*\033[0m"; }
 
@@ -27,13 +29,17 @@ log "Installing system packages (python, ffmpeg, git)…"
 sudo apt-get update -y
 sudo apt-get install -y python3 python3-venv python3-pip ffmpeg git curl openssl
 
-log "Installing Ollama (local LLM)…"
-if ! command -v ollama >/dev/null 2>&1; then
-  curl -fsSL https://ollama.com/install.sh | sh
+if [ "$LLM_PROVIDER" = "ollama" ]; then
+  log "Installing Ollama (local LLM)…"
+  if ! command -v ollama >/dev/null 2>&1; then
+    curl -fsSL https://ollama.com/install.sh | sh
+  fi
+  sudo systemctl enable --now ollama 2>/dev/null || true
+  log "Pulling model '$MODEL' (this can take a few minutes)…"
+  ollama pull "$MODEL"
+else
+  log "Using hosted LLM ($LLM_PROVIDER) — skipping Ollama (no local model needed)."
 fi
-sudo systemctl enable --now ollama 2>/dev/null || true
-log "Pulling model '$MODEL' (this can take a few minutes)…"
-ollama pull "$MODEL"
 
 log "Fetching the app…"
 if [ -d "$APP_DIR/.git" ]; then
@@ -50,9 +56,15 @@ python3 -m venv .venv
 
 log "Configuring…"
 [ -f .env ] || cp .env.example .env
-# Point the LLM at the local Ollama model.
-if grep -q "^  ollama:" config.yaml; then
+if [ "$LLM_PROVIDER" = "ollama" ]; then
+  # Point the local model at the pulled one.
   sed -i "s/^\(\s*model:\s*\).*llama3.1.*/\1\"$MODEL\"/" config.yaml || true
+else
+  # Switch config to the hosted provider (e.g. groq).
+  sed -i "s/^\(\s*provider:\s*\)\"ollama\"/\1\"$LLM_PROVIDER\"/" config.yaml || true
+  if [ "$LLM_PROVIDER" = "groq" ] && ! grep -q "^GROQ_API_KEY=." .env; then
+    echo "  ⚠ GROQ_API_KEY is not set in .env yet — add it before drafting will work."
+  fi
 fi
 # Generate a dashboard password if one isn't set.
 if ! grep -q "^DASHBOARD_PASSWORD=." .env; then

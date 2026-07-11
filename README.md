@@ -343,14 +343,22 @@ python run.py insights
 ## Run it on a server / from your phone
 
 The app is meant to run continuously, so the natural home is a small always-on
-server you control from your phone's browser — not your laptop. See
-**[`deploy/PHONE-SETUP.md`](deploy/PHONE-SETUP.md)** for a phone-only walkthrough
-on Oracle Cloud's **Always Free** tier ($0, enough RAM for the local LLM).
+server you control from your phone's browser — not your laptop. Two phone-only
+walkthroughs:
+
+- **[`deploy/PHONE-SETUP.md`](deploy/PHONE-SETUP.md)** — Oracle Cloud **Always
+  Free** ($0, enough RAM to run Ollama locally).
+- **[`deploy/VPS-SETUP.md`](deploy/VPS-SETUP.md)** — a ~$6/mo VPS (DigitalOcean/
+  Vultr/Hetzner/Linode) paid via **PayPal**, for when Oracle's card check rejects
+  you. Uses Groq (free hosted LLM) so a tiny box works.
 
 One-line install on a fresh Ubuntu server:
 
 ```bash
+# Local LLM (needs ~8GB RAM):
 curl -fsSL https://raw.githubusercontent.com/hamlettus/trend-engine/main/deploy/setup.sh | bash
+# Or hosted LLM (tiny box, needs GROQ_API_KEY):
+curl -fsSL https://raw.githubusercontent.com/hamlettus/trend-engine/main/deploy/setup.sh | LLM_PROVIDER=groq bash
 ```
 
 It installs Python/ffmpeg/Ollama, pulls the model, and runs the app as an
