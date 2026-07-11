@@ -16,6 +16,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import threading
 
@@ -31,8 +32,9 @@ log = get_logger("trendengine.cli")
 def _start_dashboard(config: Config, block: bool = True) -> threading.Thread | None:
     from trendengine.dashboard.app import create_app
 
-    host = config.dashboard.get("host", "127.0.0.1")
-    port = int(config.dashboard.get("port", 8765))
+    # Env overrides let the deploy service bind 0.0.0.0 without editing config.
+    host = os.environ.get("DASHBOARD_HOST", config.dashboard.get("host", "127.0.0.1"))
+    port = int(os.environ.get("DASHBOARD_PORT", config.dashboard.get("port", 8765)))
     app = create_app(config)
 
     def _serve():

@@ -1,0 +1,27 @@
+# Reference copy of the systemd unit that deploy/setup.sh installs.
+# Installed to /etc/systemd/system/trend-engine.service (paths filled in by the
+# script). Runs the dashboard + autopilot scheduler + hourly learning ingest,
+# and restarts automatically on crash or reboot.
+#
+# Manage it with:
+#   sudo systemctl status trend-engine
+#   sudo systemctl restart trend-engine
+#   journalctl -u trend-engine -f
+
+[Unit]
+Description=trend-engine (dashboard + autopilot + learning)
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/trend-engine
+Environment=DASHBOARD_HOST=0.0.0.0
+Environment=DASHBOARD_PORT=8765
+EnvironmentFile=/home/ubuntu/trend-engine/.env
+ExecStart=/home/ubuntu/trend-engine/.venv/bin/python run.py autopilot-run
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

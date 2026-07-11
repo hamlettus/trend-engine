@@ -6,12 +6,16 @@ Nothing is ever marked posted without your explicit click.
 """
 from __future__ import annotations
 
+import base64
 import datetime as dt
+import os
+import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from trendengine.config import Config
 from trendengine.db.database import init_db, session_scope
@@ -27,6 +31,34 @@ log = get_logger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
+class BasicAuthMiddleware(BaseHTTPMiddleware):
+    """Password-protect the whole dashboard when DASHBOARD_PASSWORD is set.
+
+    Off by default (localhost dev); the deploy script sets a password so the
+    dashboard is safe to reach over the network from your phone.
+    """
+
+    def __init__(self, app, user: str, password: str) -> None:
+        super().__init__(app)
+        self.user = user
+        self.password = password
+
+    async def dispatch(self, request, call_next):
+        if not self.password:
+            return await call_next(request)
+        header = request.headers.get("Authorization", "")
+        if header.startswith("Basic "):
+            try:
+                user, _, pw = base64.b64decode(header[6:]).decode().partition(":")
+                if (secrets.compare_digest(user, self.user)
+                        and secrets.compare_digest(pw, self.password)):
+                    return await call_next(request)
+            except Exception:  # noqa: BLE001 - malformed header => challenge
+                pass
+        return Response("Authentication required", status_code=401,
+                        headers={"WWW-Authenticate": 'Basic realm="trend-engine"'})
+
+
 def create_app(config: Config | None = None) -> FastAPI:
     setup_logging()
     config = config or Config.load()
@@ -35,6 +67,13 @@ def create_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(title="trend-engine dashboard")
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
     kill = KillSwitch(config)
+
+    # Network-facing protection (enabled when DASHBOARD_PASSWORD is set).
+    dash_password = os.environ.get("DASHBOARD_PASSWORD", "")
+    if dash_password:
+        app.add_middleware(BasicAuthMiddleware,
+                          user=os.environ.get("DASHBOARD_USER", "admin"),
+                          password=dash_password)
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request, status: str = STATUS_PENDING):
@@ -156,6 +195,42 @@ def create_app(config: Config | None = None) -> FastAPI:
         data.update(request=request, kill_active=kill.is_active(),
                     niche=config.niche.get("name", ""))
         return templates.TemplateResponse(request, "insights.html", data)
+
+    @app.get("/campaigns", response_class=HTMLResponse)
+    def campaigns_page(request: Request):
+        from trendengine.clipping.campaign import load_campaigns
+        camps = load_campaigns()
+        rows = [{
+            "id": c.id, "name": c.name, "authorized": c.is_authorized(),
+            "note": c.authorization_note, "platforms": ", ".join(c.platforms),
+            "sources": len(c.source_urls), "rate": c.payout_per_1k_views,
+            "clips": c.clips_per_source,
+        } for c in camps.values()]
+        return templates.TemplateResponse(request, "campaigns.html", {
+            "campaigns": rows, "kill_active": kill.is_active(),
+            "niche": config.niche.get("name", ""),
+            "mode": config.raw.get("autopilot", {}).get("mode", "shadow")})
+
+    @app.post("/campaigns/{campaign_id}/run")
+    def run_campaign(campaign_id: str, live: str = Form("")):
+        """Kick a clip run in the background — the phone-friendly trigger.
+
+        Refuses unauthorized campaigns (the runner raises); shadow unless the
+        live box is checked AND autopilot mode is live."""
+        import threading
+        go_live = bool(live) and config.raw.get("autopilot", {}).get("mode") == "live"
+
+        def _job():
+            from trendengine.clipping.runner import run_clip_campaign
+            try:
+                run_clip_campaign(config, campaign_id, live=go_live)
+            except Exception as exc:  # noqa: BLE001
+                log.error("Campaign run '%s' failed: %s", campaign_id, exc)
+
+        threading.Thread(target=_job, daemon=True, name=f"clip-{campaign_id}").start()
+        msg = (f"Started '{campaign_id}' ({'LIVE' if go_live else 'shadow'}). "
+               "Clips will appear in the queue shortly.")
+        return RedirectResponse(f"/campaigns?msg={_url(msg)}", status_code=303)
 
     @app.post("/killswitch/toggle")
     def toggle_kill():

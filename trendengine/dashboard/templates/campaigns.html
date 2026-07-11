@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body %}
+  <h2 style="margin-bottom:4px">Clipping campaigns</h2>
+  <p class="muted" style="margin-top:0">Authorized clip campaigns from
+    <code>campaigns.yaml</code>. Trigger a run from here — no terminal needed.</p>
+
+  {% if request.query_params.get('msg') %}
+    <div class="flash">{{ request.query_params.get('msg') }}</div>
+  {% endif %}
+
+  {% if not campaigns %}
+    <div class="card empty">No campaigns yet. Add one to <code>campaigns.yaml</code>
+      (set <code>authorized: true</code> + an authorization note).</div>
+  {% endif %}
+
+  {% for c in campaigns %}
+    <div class="card">
+      <div class="row">
+        <strong>{{ c.name or c.id }}</strong>
+        <span class="muted">· {{ c.id }}</span>
+        {% if c.authorized %}
+          <span class="pill approved">authorized</span>
+        {% else %}
+          <span class="pill rejected">not authorized</span>
+        {% endif %}
+        <span class="muted" style="margin-left:auto">
+          {{ c.sources }} source(s) · {{ c.clips }} clips each · {{ c.platforms }} · ${{ c.rate }}/1k
+        </span>
+      </div>
+      {% if c.authorized %}
+        <p class="muted" style="font-size:12px; margin:8px 0 0">🔓 {{ c.note }}</p>
+        <form method="post" action="/campaigns/{{ c.id }}/run" class="row" style="margin-top:12px">
+          <button class="primary" type="submit">Run (shadow)</button>
+          {% if mode == 'live' %}
+            <label style="display:flex; align-items:center; gap:6px; margin:0; color:var(--fg)">
+              <input type="checkbox" name="live" value="1" style="width:auto"> upload live
+            </label>
+          {% else %}
+            <span class="muted" style="font-size:12px">autopilot.mode is shadow — set it to
+              <code>live</code> in config to enable uploading</span>
+          {% endif %}
+        </form>
+      {% else %}
+        <p class="muted" style="font-size:13px; margin:10px 0 0">
+          Blocked: set <code>authorized: true</code> and an <code>authorization_note</code>
+          (your rights basis) in <code>campaigns.yaml</code> before this can run.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% endblock %}

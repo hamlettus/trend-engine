@@ -25,8 +25,10 @@ class RateLimiter:
     def ready(self, key: str, min_interval_seconds: float) -> bool:
         now = time.monotonic()
         with self._lock:
-            last = self._last.get(key, 0.0)
-            if now - last >= min_interval_seconds:
+            last = self._last.get(key)
+            # First-ever call for a key is always allowed (don't rely on the
+            # absolute monotonic value, which is small right after boot).
+            if last is None or now - last >= min_interval_seconds:
                 self._last[key] = now
                 return True
         wait = min_interval_seconds - (now - last)

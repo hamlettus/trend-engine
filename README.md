@@ -340,6 +340,36 @@ python run.py insights
 
 ---
 
+## Run it on a server / from your phone
+
+The app is meant to run continuously, so the natural home is a small always-on
+server you control from your phone's browser — not your laptop. See
+**[`deploy/PHONE-SETUP.md`](deploy/PHONE-SETUP.md)** for a phone-only walkthrough
+on Oracle Cloud's **Always Free** tier ($0, enough RAM for the local LLM).
+
+One-line install on a fresh Ubuntu server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hamlettus/trend-engine/main/deploy/setup.sh | bash
+```
+
+It installs Python/ffmpeg/Ollama, pulls the model, and runs the app as an
+auto-restarting `systemd` service (`deploy/trend-engine.service`) that serves the
+dashboard, the autopilot loop, and hourly learning ingest.
+
+**Security:** set `DASHBOARD_PASSWORD` in `.env` (the deploy script generates a
+strong one) — when set, the whole dashboard requires HTTP Basic auth, so it's
+safe to reach over the network. Better still, put it behind **Tailscale** (the
+script supports `TAILSCALE_AUTHKEY=...`) so it's never publicly exposed. The
+dashboard binds to `DASHBOARD_HOST`/`DASHBOARD_PORT` (env), defaulting to
+localhost.
+
+From the dashboard's **Campaigns** tab you can trigger a clip run with a tap — no
+terminal needed. To clip automatically on a schedule, list campaign ids under
+`autopilot.clip_campaigns` in `config.yaml`.
+
+---
+
 ## Paid clipping mode (authorized content)
 
 For the paid-clipper workflow — you clip content you're **licensed** to
@@ -465,7 +495,7 @@ See `trendengine/llm/anthropic_client.py`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 66 tests, no network required
+python -m pytest           # 70 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,

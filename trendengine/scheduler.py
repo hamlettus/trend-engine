@@ -69,6 +69,24 @@ def _ingest_job(config: Config) -> None:
         log.exception("Ingest run crashed: %s", exc)
 
 
+def _clip_job(config: Config) -> None:
+    """Run configured clipping campaigns on schedule (autopilot.clip_campaigns)."""
+    if KillSwitch(config).is_active():
+        return
+    ap = config.raw.get("autopilot", {})
+    ids = ap.get("clip_campaigns", []) or []
+    if not ids:
+        return
+    live = ap.get("mode") == "live"
+    from trendengine.clipping.runner import run_clip_campaign
+    for cid in ids:
+        try:
+            stats = run_clip_campaign(config, cid, live=live)
+            log.info("Clip campaign: %s", stats.summary())
+        except Exception as exc:  # noqa: BLE001
+            log.error("Clip campaign '%s' failed: %s", cid, exc)
+
+
 def build_autopilot_scheduler(config: Config) -> BackgroundScheduler:
     """Scheduler for fully autonomous mode: autopilot loop + learning ingest."""
     ap = config.raw.get("autopilot", {})
@@ -84,6 +102,14 @@ def build_autopilot_scheduler(config: Config) -> BackgroundScheduler:
     scheduler.add_job(
         _ingest_job, trigger=IntervalTrigger(minutes=60), args=[config],
         id="ingest_loop", max_instances=1, coalesce=True, replace_existing=True)
+
+    # If clipping campaigns are configured, clip them on the autopilot cadence.
+    if ap.get("clip_campaigns"):
+        scheduler.add_job(
+            _clip_job, trigger=IntervalTrigger(minutes=interval_min, jitter=jitter),
+            args=[config], id="clip_loop", max_instances=1, coalesce=True,
+            replace_existing=True)
+        log.info("Clip campaigns scheduled: %s", ap.get("clip_campaigns"))
 
     log.info("Autopilot scheduler: cycle every %d min (±%ds), mode=%s. Ingest hourly.",
              interval_min, jitter, ap.get("mode", "shadow"))

@@ -118,6 +118,9 @@ publishing:
 autopilot:
   enabled: true
   publisher: "youtube"       # which real publisher autopilot posts through
+  # Clipping campaigns to run automatically on the autopilot cadence (paid-clipper
+  # mode). List campaign ids from campaigns.yaml; leave empty to disable.
+  clip_campaigns: []         # e.g. ["creator-x-june"]
   # Mode controls how live it is:
   #   shadow  = run the whole loop, render, but DO NOT upload (writes would-be
   #             posts to the queue as status 'shadow' so you can inspect).
