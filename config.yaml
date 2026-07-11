@@ -166,6 +166,11 @@ media:
   piper_voice: ""                  # path to a piper .onnx voice if tts == piper
   font: ""                         # path to a .ttf; empty = ffmpeg default
   work_dir: "media_out"
+  # Whisper fallback: when a clip source has NO captions, transcribe its audio
+  # so it can still be clipped + subtitled.
+  whisper_fallback: true
+  whisper_backend: "groq"          # groq (free, whisper-large-v3) | openai (whisper-1)
+  whisper_model: "whisper-large-v3"  # groq: whisper-large-v3 ; openai: whisper-1
 
 youtube:
   category_id: "28"                # 28 = Science & Technology

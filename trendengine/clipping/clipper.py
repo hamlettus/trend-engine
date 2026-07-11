@@ -150,7 +150,21 @@ class ClipGenerator:
             raise ClipError("yt-dlp produced no mp4 (source may be unavailable).")
         vtt = next(iter(sorted(self.work.glob(f"{stem.name}*.vtt"))), None)
         segments = parse_vtt(vtt.read_text(encoding="utf-8")) if vtt else []
+        if not segments and self.media.get("whisper_fallback", True):
+            segments = self._transcribe_fallback(video)
         return video, segments
+
+    def _transcribe_fallback(self, video: Path) -> list[Segment]:
+        """No captions on the source — transcribe the audio with Whisper."""
+        from trendengine.clipping.whisper import (WhisperError, extract_audio,
+                                                  transcribe)
+        log.info("No captions for %s — using Whisper fallback.", video.name)
+        try:
+            audio = extract_audio(video, self.work / f"{video.stem}.m4a")
+            return transcribe(audio, self.config)
+        except WhisperError as exc:
+            log.warning("Whisper fallback unavailable (%s) — no transcript.", exc)
+            return []
 
     # -- moment selection (LLM) --------------------------------------------
     def select_moments(self, segments: list[Segment], campaign: Campaign,

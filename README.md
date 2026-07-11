@@ -426,8 +426,14 @@ python run.py earnings                                 # views × rate per campa
 Earnings also show on the dashboard **Insights** tab. First real publisher is
 **YouTube Shorts** (reuses the existing OAuth uploader); TikTok and IG/FB Reels
 are ready-to-wire stubs — fill in their `publish()` and add them to a campaign's
-`platforms`. Captions need to exist on the source (yt-dlp fetches them); a
-Whisper fallback for caption-less sources is a natural add.
+`platforms`.
+
+**Caption-less sources:** yt-dlp fetches the source's captions for moment
+selection + burned subtitles. If a source has none, the clipper extracts its
+audio and transcribes it via **Whisper** (`media.whisper_fallback`, default on).
+The default backend is **Groq** (`whisper-large-v3`, free — reuses `GROQ_API_KEY`);
+set `media.whisper_backend: openai` for `whisper-1`. If transcription is
+unavailable it degrades gracefully (that source is skipped, the run continues).
 
 ---
 
@@ -499,7 +505,7 @@ No code changes for any of them. Adapters live in `trendengine/llm/`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 75 tests, no network required
+python -m pytest           # 82 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,
