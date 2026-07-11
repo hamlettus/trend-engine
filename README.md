@@ -432,8 +432,11 @@ are ready-to-wire stubs — fill in their `publish()` and add them to a campaign
 selection + burned subtitles. If a source has none, the clipper extracts its
 audio and transcribes it via **Whisper** (`media.whisper_fallback`, default on).
 The default backend is **Groq** (`whisper-large-v3`, free — reuses `GROQ_API_KEY`);
-set `media.whisper_backend: openai` for `whisper-1`. If transcription is
-unavailable it degrades gracefully (that source is skipped, the run continues).
+set `media.whisper_backend: openai` for `whisper-1`. Long sources over the 25 MB
+upload cap are **split into chunks** (`media.whisper_chunk_seconds`), transcribed
+separately, and stitched back into absolute time — partial-chunk failures are
+tolerated. If transcription is unavailable it degrades gracefully (that source is
+skipped, the run continues).
 
 ---
 
@@ -505,7 +508,7 @@ No code changes for any of them. Adapters live in `trendengine/llm/`.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest           # 82 tests, no network required
+python -m pytest           # 83 tests, no network required
 ```
 
 The suite covers hashing/dedup, rate limiting, pandas scoring, the drafter,

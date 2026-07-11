@@ -171,6 +171,7 @@ media:
   whisper_fallback: true
   whisper_backend: "groq"          # groq (free, whisper-large-v3) | openai (whisper-1)
   whisper_model: "whisper-large-v3"  # groq: whisper-large-v3 ; openai: whisper-1
+  whisper_chunk_seconds: 600       # long audio is split into chunks this size (for the 25MB cap)
 
 youtube:
   category_id: "28"                # 28 = Science & Technology

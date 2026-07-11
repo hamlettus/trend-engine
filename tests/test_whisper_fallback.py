@@ -54,11 +54,48 @@ def test_transcribe_openai_backend(config, tmp_path, monkeypatch):
     assert transcribe(_audio(tmp_path), config) == []
 
 
-def test_transcribe_rejects_oversized_audio(config, tmp_path, monkeypatch):
+def test_transcribe_chunks_oversized_audio_and_offsets_time(config, tmp_path, monkeypatch):
+    """Audio over the cap is split into chunks and stitched into absolute time."""
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
-    with pytest.raises(WhisperError) as e:
-        transcribe(_audio(tmp_path, mb=30), config)
-    assert "cap" in str(e.value).lower()
+    config.raw["media"]["whisper_chunk_seconds"] = 600
+    # 20-minute source -> 2 chunks of 600s.
+    monkeypatch.setattr("trendengine.clipping.whisper._probe_duration",
+                        lambda p: 1200.0)
+    monkeypatch.setattr("trendengine.clipping.whisper._extract_chunk",
+                        lambda audio, start, dur, out: (out.write_bytes(b"\x00"), out)[1])
+
+    calls = {"n": 0}
+    def fake_post(url, headers=None, files=None, data=None, timeout=None):
+        calls["n"] += 1
+        return _Resp(200, {"segments": [{"start": 1.0, "end": 3.0, "text": "seg"}]})
+    monkeypatch.setattr("trendengine.clipping.whisper.requests.post", fake_post)
+
+    segs = transcribe(_audio(tmp_path, mb=30), config)
+    assert calls["n"] == 2                       # two chunks transcribed
+    assert len(segs) == 2
+    assert segs[0].start == 1.0                  # chunk 1: no offset
+    assert segs[1].start == 601.0                # chunk 2: offset by 600s
+
+
+def test_transcribe_chunking_tolerates_partial_failure(config, tmp_path, monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+    config.raw["media"]["whisper_chunk_seconds"] = 600
+    monkeypatch.setattr("trendengine.clipping.whisper._probe_duration",
+                        lambda p: 1200.0)
+    monkeypatch.setattr("trendengine.clipping.whisper._extract_chunk",
+                        lambda audio, start, dur, out: (out.write_bytes(b"\x00"), out)[1])
+
+    state = {"n": 0}
+    def flaky_post(url, headers=None, files=None, data=None, timeout=None):
+        state["n"] += 1
+        if state["n"] == 1:
+            return _Resp(500, text="boom")       # first chunk fails
+        return _Resp(200, {"segments": [{"start": 0.5, "end": 2.0, "text": "ok"}]})
+    monkeypatch.setattr("trendengine.clipping.whisper.requests.post", flaky_post)
+
+    segs = transcribe(_audio(tmp_path, mb=30), config)
+    assert len(segs) == 1                          # partial transcript survives
+    assert segs[0].start == 600.5                  # from the second (surviving) chunk
 
 
 def test_transcribe_maps_http_error(config, tmp_path, monkeypatch):
