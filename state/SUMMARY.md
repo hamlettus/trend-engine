@@ -1,6 +1,6 @@
 # trend-engine — run summary
 
-_Last run: **2026-11-10 01:22 UTC** · mode: **shadow (not posting)**_
+_Last run: **2026-11-10 14:38 UTC** · mode: **shadow (not posting)**_
 
 ## This run
 - No campaigns configured (set `autopilot.clip_campaigns` in config.yaml).
